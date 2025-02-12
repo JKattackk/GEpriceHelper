@@ -1,24 +1,27 @@
 import json
 import os.path
 import requests
-from datetime import datetime, timedelta
 import time
-
 import matplotlib.pyplot as plt
 import numpy as np
 
 headers = {
-    'User-Agent': 'GE price trend tracking wip discord @kat6541',
-    'From': 'jkattackk@gmail.com'  # This is another valid field
+    'User-Agent': 'GE price trend tracking wip discord @kat6541'
 }
+
+#directories
 filename = os.path.expanduser("~/Documents/GElog/grand_exchange.json")
 itemDataFile = os.path.expanduser("~/Documents/GElog/itemData.json")
 filteredItemDataFile = os.path.expanduser("~/Documents/GElog/filteredItemData.json")
 priceDataFilePath = os.path.expanduser("~/Documents/GElog/priceData/")
+derivedPriceDataFilePath = os.path.expanduser("~/Documents/GElog/priceData/derivedData/")
 
-tempTrackingID = '2'
+
+#URL's
 latestURL = "https://prices.runescape.wiki/api/v1/osrs/latest"
 itemListURL = "https://chisel.weirdgloop.org/gazproj/gazbot/os_dump.json"
+
+tempTrackingID = '28924'
 minBuyLimitValue = 1000000 #used as a minimum value for itemPrice*buyLimit
 minHourlyThroughput = 1000000 #used as a minimum value for itemPrice*volume
 maxPrice = 120000000 #used as a maximum value for individual item price
@@ -35,8 +38,7 @@ def getPriceDataHistory(itemID):
         filePath = priceDataFilePath + itemID + ".json"
         with open(filePath, "w") as f:
             json.dump(json.loads(response.text)['data'], f)
-            print(f"New data saved to {filePath}")
-
+            print("New data saved to {filePath}")
 def updateItemList():
     # examine, highalch, icon, id, last, limit, lowalch, members, name, price, value, volume
     itemWatchCount = 0
@@ -72,26 +74,134 @@ def updateItemList():
     with open(filteredItemDataFile, "w") as f:
         json.dump(filteredItemList, f)
         print(f"New data saved to {filteredItemDataFile}")
+def showPlot(id):
+    fig1.plot([d['timestamp'] for d in priceData], [d['avgHighPrice'] for d in priceData])
+
+    with open(derivedPriceDataFilePath + tempTrackingID + '_1d.json', "r") as f:
+        priceData_1d = json.load(f)
+    fig2.plot([d['timestamp'] for d in priceData_1d], [d['avgHighPrice'] for d in priceData_1d])
+    fig2.set_yticks([-100, -80, -60, -40, -20, 0, 20, 40, 60, 80, 100])
+    fig2.set_ylim(-150, 150)
+    with open(derivedPriceDataFilePath + tempTrackingID + '_2d.json', "r") as f:
+        priceData_2d = json.load(f)
+    fig3.plot([d['timestamp'] for d in priceData_2d], [d['avgHighPrice'] for d in priceData_2d])
+    fig3.set_yticks([-0.2, -0.1, 0, 0.1, 0.2])
+    fig3.set_ylim(-2, 2)
+    plt.show()
+
+def getDerivative(id):
+    with open(priceDataFilePath + id + '.json', "r") as f:
+        priceData = json.load(f)
+    if not os.path.exists(derivedPriceDataFilePath + id + "_1d.json"):
+        data = [dict() for x in range(len(priceData) - 1)]
+
+        for i in range(0, len(priceData) - 1):
+            data[i]['timestamp'] = priceData[i + 1].get('timestamp')
+            try:
+                data[i]['avgHighPrice'] = (priceData[i+1].get('avgHighPrice') - priceData[i].get('avgHighPrice'))/(priceData[i+1].get('timestamp') - priceData[i].get('timestamp'))
+            except:
+                data[i]['avgHighPrice'] = None
+                print('incomplete data for point: ', i)
+        with open(derivedPriceDataFilePath + id + '_1d.json', "w") as f:
+            json.dump(data, f)
+            print("New data saved to ", id)
+    else:
+        with open(derivedPriceDataFilePath + id + '_1d.json', "r") as f:
+            data = json.load(f)
+        if len(priceData) > len(data) + 1:
+            data.append(dict())
+            try:
+                data[len(priceData) - 2]['timestamp'] = priceData[len(priceData) - 1].get('timestamp')
+                data[len(priceData) - 2]['avgHighPrice'] = (priceData[len(priceData) - 1].get('avgHighPrice') -
+                                                            priceData[len(priceData) - 2].get('avgHighPrice')) / (
+                                                                   priceData[len(priceData) - 1].get('timestamp') -
+                                                                   priceData[len(priceData) - 2].get('timestamp'))
+            except:
+                data[len(priceData) - 2]['timestamp'] = priceData[len(priceData) - 1].get('timestamp')
+                data[len(priceData) - 2]['avgHighPrice'] = None
+                print('incomplete data for point: ', len(priceData) - 2)
+            with open(derivedPriceDataFilePath + id + '_1d.json', "w") as f:
+                json.dump(data, f)
+                print("New data saved to ", id)
+        else:
+            print('no new price point for: ', id)
+
+def getSecondDerivative(id):
+    with open(derivedPriceDataFilePath + id + '_1d.json', "r") as f:
+        priceData = json.load(f)
+    if not os.path.exists(derivedPriceDataFilePath + id + "_2d.json"):
+        data = [dict() for x in range(len(priceData) - 1)]
+        for i in range(0, len(priceData) - 1):
+            data[i]['timestamp'] = priceData[i + 1].get('timestamp')
+            try:
+                data[i]['avgHighPrice'] = (priceData[i+1].get('avgHighPrice') - priceData[i].get('avgHighPrice'))/(priceData[i+1].get('timestamp') - priceData[i].get('timestamp'))
+            except:
+                data[i]['avgHighPrice'] = None
+                print('incomplete data for point: ', i)
+        with open(derivedPriceDataFilePath + id + '_2d.json', "w") as f:
+            json.dump(data, f)
+            print("New data saved to ", id)
+    else:
+        with open(derivedPriceDataFilePath + id + '_2d.json', "r") as f:
+            data = json.load(f)
+        if len(priceData) > len(data) + 1:
+            data.append(dict())
+            try:
+                data[len(priceData) - 2]['timestamp'] = priceData[len(priceData) - 1].get('timestamp')
+                data[len(priceData) - 2]['avgHighPrice'] = (priceData[len(priceData) - 1].get('avgHighPrice') -
+                                                            priceData[len(priceData) - 2].get('avgHighPrice')) / (
+                                                                   priceData[len(priceData) - 1].get('timestamp') -
+                                                                   priceData[len(priceData) - 2].get('timestamp'))
+            except:
+                data[len(priceData) - 2]['timestamp'] = priceData[len(priceData) - 1].get('timestamp')
+                data[len(priceData) - 2]['avgHighPrice'] = None
+                print('incomplete data for point: ', len(priceData) - 2)
+            with open(derivedPriceDataFilePath + id + '_2d.json', "w") as f:
+                json.dump(data, f)
+                print("New data saved to ", id)
+        else:
+            print('no new price point for: ', id)
 
 # BEGIN MAIN
-if not os.path.exists(priceDataFilePath + tempTrackingID + ".json"):
-    getPriceDataHistory(tempTrackingID)
+with open(filteredItemDataFile, "r") as f:
+    trackingList = json.load(f)
 
-with open(priceDataFilePath + tempTrackingID + '.json', "r") as f:
+for entry in trackingList:
+    if not os.path.exists(priceDataFilePath + entry + ".json"):
+        getPriceDataHistory(entry)
+        time.sleep(10)
+    getDerivative(entry)
+    getSecondDerivative(entry)
+
+fig, (fig1, fig2, fig3) = plt.subplots(3)
+
+with open(priceDataFilePath + trackingList[0] + '.json', "r") as f:
     priceData = json.load(f)
-    lastCheckTime = time.time()
+    lastCheckTime = priceData[len(priceData)-1].get('timestamp')
 while 1:
-    if (int(time.time()) - int(lastCheckTime)) > 550:
+    if (int(time.time()) - int(lastCheckTime)) > 530:
+        print('checking')
         url = "https://prices.runescape.wiki/api/v1/osrs/5m"
         response = requests.get(url, headers=headers)
         data = json.loads(response.text)
         lastCheckTime = data.get('timestamp')
-        data.get('data').get('2')['timestamp'] = data.get('timestamp')
-        priceData.append(data.get('data').get('2'))
+        data.get('data').get()['timestamp'] = data.get('timestamp')
 
-        with open(priceDataFilePath + tempTrackingID + '.json', "w") as f:
-            json.dump(priceData, f)
-            print(f"New data saved to {tempTrackingID}")
+        for entry in trackingList:
+            with open(priceDataFilePath + entry + '.json', "r") as f:
+                priceData = json.load(f)
+            priceData.append(data.get('data').get('2'))
+            with open(priceDataFilePath + entry + '.json', "w") as f:
+                json.dump(priceData, f)
+                print(f"New data saved to {entry}")
+            getDerivative(entry)
+            getSecondDerivative(entry)
+
+        with open(priceDataFilePath + trackingList[0] + '.json', "r") as f:
+            priceData = json.load(f)
+            lastCheckTime = priceData[len(priceData) - 1].get('timestamp')
+
+
         time.sleep(300)
 
 
