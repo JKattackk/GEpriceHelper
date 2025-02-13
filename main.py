@@ -90,7 +90,7 @@ def getDerivative(id):
                 priceSeries.append(entry.get('avgHighPrice'))
                 entryCount = entryCount + 1
 
-        data = [dict() for x in range(entryCount)]
+        data = [dict() for x in range(entryCount-1)]
         for i in range(0, entryCount - 1):
             data[i]['timestamp'] = timeSeries[i + 1]
             try:
@@ -184,7 +184,7 @@ while 1:
         print('checking')
         url = "https://prices.runescape.wiki/api/v1/osrs/5m"
         print('requesting 5m data history')
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers = headers)
         data = json.loads(response.text)
         lastCheckTime = data.get('timestamp')
 
