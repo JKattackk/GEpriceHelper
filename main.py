@@ -22,7 +22,7 @@ latestURL = "https://prices.runescape.wiki/api/v1/osrs/latest"
 itemListURL = "https://chisel.weirdgloop.org/gazproj/gazbot/os_dump.json"
 
 tempTrackingID = '28924'
-minBuyLimitValue = 5000000 #used as a minimum value for itemPrice*buyLimit
+minBuyLimitValue = 2000000 #used as a minimum value for itemPrice*buyLimit
 minHourlyThroughput = 100000000 #used as a minimum value for itemPrice*volume
 minHourlyVolume = 1000
 maxPrice = 120000000 #used as a maximum value for individual item price
@@ -76,20 +76,6 @@ def updateItemList():
     with open(filteredItemDataFile, "w") as f:
         json.dump(filteredItemList, f)
         print(f"New data saved to {filteredItemDataFile}")
-def showPlot(id):
-    fig1.plot([d['timestamp'] for d in priceData], [d['avgHighPrice'] for d in priceData])
-
-    with open(derivedPriceDataFilePath + tempTrackingID + '_1d.json', "r") as f:
-        priceData_1d = json.load(f)
-    fig2.plot([d['timestamp'] for d in priceData_1d], [d['avgHighPrice'] for d in priceData_1d])
-    fig2.set_yticks([-100, -80, -60, -40, -20, 0, 20, 40, 60, 80, 100])
-    fig2.set_ylim(-150, 150)
-    with open(derivedPriceDataFilePath + tempTrackingID + '_2d.json', "r") as f:
-        priceData_2d = json.load(f)
-    fig3.plot([d['timestamp'] for d in priceData_2d], [d['avgHighPrice'] for d in priceData_2d])
-    fig3.set_yticks([-0.2, -0.1, 0, 0.1, 0.2])
-    fig3.set_ylim(-2, 2)
-    plt.show()
 def getDerivative(id):
     with open(priceDataFilePath + id + '.json', "r") as f:
         priceData = json.load(f)
@@ -106,9 +92,9 @@ def getDerivative(id):
 
         data = [dict() for x in range(entryCount)]
         for i in range(0, entryCount - 1):
-            data[i]['timestamp'] = priceSeries[i + 1]
+            data[i]['timestamp'] = timeSeries[i + 1]
             try:
-                data[i]['avgHighPrice'] = (priceSeries[i+1] - priceSeries[i])/(priceSeries[i+1] - priceSeries[i])
+                data[i]['avgHighPrice'] = (priceSeries[i+1] - priceSeries[i])/(timeSeries[i+1] - timeSeries[i])
             except:
                 data[i]['avgHighPrice'] = None
                 print('incomplete data for point: ', i)
@@ -189,7 +175,7 @@ for entry in trackingList:
         getSecondDerivative(entry)
 
 print('updated long term price data for 5m averages')
-fig, (fig1, fig2, fig3) = plt.subplots(3)
+
 with open(priceDataFilePath + trackingList[0] + '.json', "r") as f:
     priceData = json.load(f)
     lastCheckTime = priceData[len(priceData)-1].get('timestamp')
