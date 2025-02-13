@@ -22,8 +22,9 @@ latestURL = "https://prices.runescape.wiki/api/v1/osrs/latest"
 itemListURL = "https://chisel.weirdgloop.org/gazproj/gazbot/os_dump.json"
 
 tempTrackingID = '28924'
-minBuyLimitValue = 1000000 #used as a minimum value for itemPrice*buyLimit
-minHourlyThroughput = 1000000 #used as a minimum value for itemPrice*volume
+minBuyLimitValue = 5000000 #used as a minimum value for itemPrice*buyLimit
+minHourlyThroughput = 100000000 #used as a minimum value for itemPrice*volume
+minHourlyVolume = 40
 maxPrice = 120000000 #used as a maximum value for individual item price
 
 
@@ -33,6 +34,7 @@ maxPrice = 120000000 #used as a maximum value for individual item price
 #        print(f"New data saved to {itemDataFile}")
 def getPriceDataHistory(itemID):
         url = "https://prices.runescape.wiki/api/v1/osrs/timeseries?timestep=5m&id=" + itemID
+        print('requesting data history')
         response = requests.get(url, headers=headers)
         # Save the data to the file
         filePath = priceDataFilePath + itemID + ".json"
@@ -64,7 +66,7 @@ def updateItemList():
             except:
                 lastPrice = 0
             print(itemList[item].get("name"), itemList[item].get("id"))
-            if hourlyThroughput > minHourlyThroughput and buyLimitValue > minBuyLimitValue and lastPrice < maxPrice:
+            if hourlyThroughput > minHourlyThroughput and buyLimitValue > minBuyLimitValue and lastPrice < maxPrice and itemList[item].get("volume") > minHourlyVolume:
                 filteredItemList[item] = itemList[item]
                 itemWatchCount = itemWatchCount + 1
                 print("id: ", itemList[item].get("id"), "name: ", itemList[item].get("name"), " price: ",
@@ -88,7 +90,6 @@ def showPlot(id):
     fig3.set_yticks([-0.2, -0.1, 0, 0.1, 0.2])
     fig3.set_ylim(-2, 2)
     plt.show()
-
 def getDerivative(id):
     with open(priceDataFilePath + id + '.json', "r") as f:
         priceData = json.load(f)
@@ -125,7 +126,6 @@ def getDerivative(id):
                 print("New data saved to ", id)
         else:
             print('no new price point for: ', id)
-
 def getSecondDerivative(id):
     with open(derivedPriceDataFilePath + id + '_1d.json', "r") as f:
         priceData = json.load(f)
@@ -161,20 +161,20 @@ def getSecondDerivative(id):
                 print("New data saved to ", id)
         else:
             print('no new price point for: ', id)
-
 # BEGIN MAIN
+updateItemList()
 with open(filteredItemDataFile, "r") as f:
-    trackingList = json.load(f)
+    trackingList = list(json.load(f).keys())
 
 for entry in trackingList:
     if not os.path.exists(priceDataFilePath + entry + ".json"):
         getPriceDataHistory(entry)
-        time.sleep(10)
-    getDerivative(entry)
-    getSecondDerivative(entry)
+        time.sleep(1)
+        getDerivative(entry)
+        getSecondDerivative(entry)
 
+print('updated long term price data for 5m averages')
 fig, (fig1, fig2, fig3) = plt.subplots(3)
-
 with open(priceDataFilePath + trackingList[0] + '.json', "r") as f:
     priceData = json.load(f)
     lastCheckTime = priceData[len(priceData)-1].get('timestamp')
@@ -182,15 +182,16 @@ while 1:
     if (int(time.time()) - int(lastCheckTime)) > 530:
         print('checking')
         url = "https://prices.runescape.wiki/api/v1/osrs/5m"
+        print('requesting 5m data history')
         response = requests.get(url, headers=headers)
         data = json.loads(response.text)
         lastCheckTime = data.get('timestamp')
-        data.get('data').get()['timestamp'] = data.get('timestamp')
 
         for entry in trackingList:
+            data.get('data').get(entry)['timestamp'] = data.get('timestamp')
             with open(priceDataFilePath + entry + '.json', "r") as f:
                 priceData = json.load(f)
-            priceData.append(data.get('data').get('2'))
+            priceData.append(data.get('data').get(entry))
             with open(priceDataFilePath + entry + '.json', "w") as f:
                 json.dump(priceData, f)
                 print(f"New data saved to {entry}")
