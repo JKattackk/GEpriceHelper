@@ -122,7 +122,7 @@ def getDerivative(id):
             x = len(priceData) - 2
             foundPriorEntry = False
             while (x >= 0 and (not foundPriorEntry)):
-                if (priceData[x].get('avgHighPrice') == None):
+                if (priceData[x].get('avgHighPrice') == None or (priceData[len(data)-1].get('timestamp') - priceData[x].get('timestamp') == 0)):
                     x = x - 1
                 else:
                     foundPriorEntry = True
@@ -203,19 +203,21 @@ while 1:
         lastCheckTime = data.get('timestamp')
 
         for entry in trackingList:
-            try:
-                data.get('data').get(entry)['timestamp'] = data.get('timestamp')
-            except:
-                print('error assigning time for ', entry)
+            if (not data.get('data').get(entry) == None):
+                try:
+                    data.get('data').get(entry)['timestamp'] = data.get('timestamp')
+                except:
+                    print('error assigning time for ', entry)
 
-            with open(priceDataFilePath + entry + '.json', "r") as f:
-                priceData = json.load(f)
-            priceData.append(data.get('data').get(entry))
-            with open(priceDataFilePath + entry + '.json', "w") as f:
-                json.dump(priceData, f)
-                print(f"New data saved to {entry}")
-            getDerivative(entry)
-            getSecondDerivative(entry)
+                with open(priceDataFilePath + entry + '.json', "r") as f:
+                    priceData = json.load(f)
+                if (not priceData[len(priceData)-1].get("timestamp") == data.get('data').get(entry)['timestamp']):
+                    priceData.append(data.get('data').get(entry))
+                    with open(priceDataFilePath + entry + '.json', "w") as f:
+                        json.dump(priceData, f)
+                        print(f"New data saved to {entry}")
+                    getDerivative(entry)
+                    getSecondDerivative(entry)
 
         with open(priceDataFilePath + trackingList[0] + '.json', "r") as f:
             priceData = json.load(f)
