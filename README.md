@@ -1,5 +1,6 @@
 Very much an early work in progress.
-WARNING: this will create a lot of files and currently does not trim old data in the price logs. Data will be stored in "~/Documents/GElog/"
+WARNING: this will create a lot of files and currently does not trim old data in the price logs. 
+Data will be stored in "~/Documents/GElog/"
 
 This retrieves and stores price data for certain OSRS items using the OSRS wiki real time prices API (https://oldschool.runescape.wiki/w/RuneScape:Real-time_Prices).
 Currently chooses these items based on a minimum buy limit value, minimum hourly throughput (itemPrice*volume), minimum hourly volume, and maximum item price.
