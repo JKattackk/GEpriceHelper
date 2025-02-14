@@ -1,4 +1,4 @@
-Very much an early work in progress.
+Very much an early work in progress.  Still deciding exactly what data I want to calculate and store as well as how I want to make it easily viewable.
 WARNING: this will create a lot of files and currently does not trim old data in the price logs. 
 Data will be stored in "~/Documents/GElog/"
 
