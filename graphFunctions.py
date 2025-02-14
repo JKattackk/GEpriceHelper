@@ -24,4 +24,4 @@ def showPlot(id):
     # fig3.set_ylim(-2, 2)
     plt.show()
 
-showPlot('19544')
+showPlot('30634')
