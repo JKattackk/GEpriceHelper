@@ -2,6 +2,8 @@ import json
 import os.path
 import requests
 import time
+from datetime import datetime
+from tzlocal import get_localzone
 
 headers = {
     'User-Agent': 'GE price trend tracking wip discord @kat6541'
@@ -24,6 +26,7 @@ minHourlyThroughput = 100000000 #used as a minimum value for itemPrice*volume
 minHourlyVolume = 10000
 maxPrice = 120000000 #used as a maximum value for individual item price
 oneDayTime = 60*60*24
+timezone = get_localzone()
 
 #updating unfiltered item list
 itemList = json.loads(requests.get(itemListURL).text)
@@ -36,7 +39,7 @@ def getPriceDataHistory(itemID):
     #file contains data for up to 365 entries  at 5 minute intervals
     #each entry has fields {timestamp, avgHighPrice, avgLowPrice, highPriceVolume, lowPriceVolume}
     url = "https://prices.runescape.wiki/api/v1/osrs/timeseries?timestep=5m&id=" + itemID
-    print('requesting data history')
+    #print('requesting data history')
     response = requests.get(url, headers=headers)
     # Save the data to the file
     filePath = priceDataFilePath + itemID + ".json"
@@ -200,10 +203,6 @@ def getDerivative(id):
                 with open(derivedPriceDataFilePath + id + '_1d.json', "w") as f:
                     json.dump(data, f)
                     #print("New data saved to ", id)
-            else:
-                print('no old price point for: ', id)
-        else:
-            print('no new price point for: ', id)
 def getSecondDerivative(id):
     #calculates the second derivative of the item's high price over time
     #stores the result as ~/Documents/GElog/priceData/derivedData/{id}_2d.json
@@ -239,8 +238,6 @@ def getSecondDerivative(id):
             with open(derivedPriceDataFilePath + id + '_2d.json', "w") as f:
                 json.dump(data, f)
                 #print("New data saved to ", id)
-        else:
-            print('no new price point for: ', id)
 # BEGIN MAIN
 updateItemList()
 
@@ -303,20 +300,26 @@ while 1:
                         trackingList[entry]["highPriceChange"] = ((data.get('data').get(entry).get(
                             "avgHighPrice") / newAvg.get("avgHighPrice")) * 100) - 100
                     except:
-                        trackingList[entry]["highPriceChange"] = "Invalid"
+                        trackingList[entry]["highPriceChange"] = 0
                     try:
                         trackingList[entry]["lowPriceChange"] = ((data.get('data').get(entry).get("avgLowPrice") / newAvg.get("avgLowPrice")) * 100) - 100
                     except:
-                        trackingList[entry]["lowPriceChange"] = "Invalid"
+                        trackingList[entry]["lowPriceChange"] = 0
                     try:
                         trackingList[entry]["highVolumeChange"] = ((data.get('data').get(entry).get("highPriceVolume") / newAvg.get("avgHighVolume")) * 100) - 100
                     except:
-                        trackingList[entry]["highVolumeChange"] = "Invalid"
+                        trackingList[entry]["highVolumeChange"] = 0
                     try:
                         trackingList[entry]["lowVolumeChange"] = ((data.get('data').get(entry).get("lowPriceVolume") / newAvg.get("avgLowVolume")) * 100) - 100
                     except:
-                        trackingList[entry]["lowVolumeChange"] = "invalid"
-
+                        trackingList[entry]["lowVolumeChange"] = 0
+                    if (trackingList[entry]["lowPriceChange"] < -4 or trackingList[entry]["highPriceChange"] < -4) and (
+                            trackingList[entry]["highVolumeChange"] > 60 or trackingList[entry][
+                        "lowVolumeChange"] > 60):
+                        print(trackingList[entry]["name"], ": low price ", trackingList[entry]["lowPriceChange"],
+                              "%, high price ", trackingList[entry]["highPriceChange"], "%, low volume ",
+                              trackingList[entry]["lowVolumeChange"], "%, high volume ",
+                              trackingList[entry]["highVolumeChange"], "%")
         #update latest check time
         with open(priceDataFilePath + keys[0] + '.json', "r") as f:
             priceData = json.load(f)
@@ -325,7 +328,8 @@ while 1:
         # save updated filteredItemList
         with open(filteredItemDataFile, "w") as f:
             json.dump(trackingList, f)
-        print('finished updating 5m price history for: ', lastCheckTime)
+
+        print('finished updating 5m price history for: ', datetime.fromtimestamp(lastCheckTime, tz=timezone))
         time.sleep(300)
 
 
